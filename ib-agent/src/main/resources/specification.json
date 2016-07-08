@@ -1,0 +1,7 @@
+{
+  "name": "Agent",
+  "description": "Integrity benchmark Agent",
+  "version": "0.1",
+  "author": "Diryavkin Dmitri",
+  "license": "Apache 2.0"
+}
