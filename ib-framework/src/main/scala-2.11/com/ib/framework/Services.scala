@@ -6,7 +6,8 @@ package com.ib.framework
 import com.bwsw.tstreams.common.zkservice.ZkService
 
 object Services {
-  val zkService = new ZkService(Config.rootPath+Config.benchmarkPath, List(new java.net.InetSocketAddress(Config.zkHost, Config.zkPort)), 0)
+  val zkService = new ZkService(Config.rootPath+Config.benchmarkPath,
+    List(new java.net.InetSocketAddress(Config.zkHost, Config.zkPort)), 60)
 
   def zkSetData(path:String, data:Any): Unit = {
     if (zkService.exist(path)) zkService.setData(path, data)

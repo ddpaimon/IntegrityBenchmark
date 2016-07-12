@@ -15,6 +15,7 @@ object Config {
   val benchmarkPath = "/benchmark"
   var keyspace = "keyspace"
   val agent_address = "176.120.25.19"
+  val command = "java -jar ib-agent.jar"
   def newKeyspace(cnt:Int) = {
     keyspace = "keyspace_" + cnt + "_" + RandomStringCreator.randomAlphaString(10)
   }

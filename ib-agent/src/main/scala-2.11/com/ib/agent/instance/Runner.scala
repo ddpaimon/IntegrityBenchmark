@@ -19,20 +19,16 @@ object Runner {
   val zkService = new ZkService(Config.rootPath+Config.benchmarkPath, List(new java.net.InetSocketAddress("192.168.1.225", 2181)), 60)
 
 
-
-
   def runProducer() = {
     logger.info("prod="+Config.Keyspace)
     val r = scala.util.Random
     val totalDataInTxn = Config.transactionLength
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).sorted
-    val pr1 = Instance.getProducer
-    val pr2 = Instance.getProducer
-    val pr3 = Instance.getProducer
-    val pr4 = Instance.getProducer
     val instance = Instance.getProducer
     var transactionsCount = 0
+    logger.info("Start send message")
     for (transactionIndex <- 1 to Config.transactionCount) {
+      logger.info(transactionIndex)
       val txn = instance.newTransaction(ProducerPolicies.errorIfOpen)
       if (r.nextFloat > Config.rollback) {
         transactionsCount += 1
@@ -43,21 +39,12 @@ object Runner {
         txn.cancel
         logger.info(s"Canceled: ${txn.getTxnUUID}")
       }
-      logger.info("PROD: "+pr1)
-      logger.info("PROD: "+pr2)
-      logger.info("PROD: "+pr3)
-      logger.info("PROD: "+pr4)
-      println(pr1)
-      println(pr2)
-      println(pr3)
-      println(pr4)
     }
     val instancePath = "/"+Config.Keyspace+"/"+instance.name.toString
     if (zkService.exist(instancePath)) zkService.setData(instancePath, "{\"T-count\":" + "\""+transactionsCount+"\"}")
     else zkService.create(instancePath, transactionsCount, org.apache.zookeeper.CreateMode.PERSISTENT)
-//    System.exit(0)
+    System.exit(0)
   }
-
 
 
 
@@ -67,10 +54,20 @@ object Runner {
     val watcher = new Watcher {
       override def process(event: WatchedEvent): Unit = {
         logger.info("Run consumer watcher process" + "PATH: " + "/"+Config.Keyspace)
+        Thread.sleep(Config.consumerTimeout*1000)
+        var transactionsCount = receivedTransactions.length
+        var checkTimestamp:Long = 0
+        for (transaction <- receivedTransactions) {
+          if (transaction.getTxnUUID.timestamp < checkTimestamp){
+            transactionsCount = -1
+          }
+          checkTimestamp = transaction.getTxnUUID.timestamp
+        }
         val data = zkService.get[Int]("/"+Config.Keyspace)
         val instancePath = "/"+Config.Keyspace+"/"+instance.name.toString
-        if (zkService.exist(instancePath)) zkService.setData(instancePath,receivedTransactions.length)
-        else zkService.create(instancePath, receivedTransactions.length, org.apache.zookeeper.CreateMode.PERSISTENT)
+        if (zkService.exist(instancePath)) zkService.setData(instancePath,transactionsCount)
+        else zkService.create(instancePath, transactionsCount, org.apache.zookeeper.CreateMode.PERSISTENT)
+
         System.exit(0)
       }
     }
@@ -113,6 +110,7 @@ object Runner {
         println("Alive")
       }
     }
+
     oncePerSecond(() => checkCompletion())
   }
 }

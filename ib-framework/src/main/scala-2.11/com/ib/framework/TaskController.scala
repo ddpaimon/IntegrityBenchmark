@@ -106,7 +106,7 @@ object TaskController {
       case "TASK_FINISHED" =>
         if (producerTasks.contains(status.getTaskId.getValue)) {
           producerTasks -= status.getTaskId.getValue
-          if (producerTasks.isEmpty) {
+          if (producerTasks.isEmpty && tasksToLaunch.isEmpty) {
 //            finishBenchmark()
             afterProducersFinished()
           }
@@ -134,8 +134,20 @@ object TaskController {
       case "TASK_FINISHED" =>
 
       case "TASK_FAILED" =>
+        val thread = new Thread {
+          override def run(): Unit = {
+            val r = scala.util.Random
+            val high = getCurrentBenchmark.masterRestart.last
+            val low = getCurrentBenchmark.masterRestart.head
+            val sleepTime = r.nextInt(high-low)+low
+            Thread.sleep(sleepTime*1000)
+            tasksToLaunch+=status.getTaskId.getValue
+          }
+        }
+        thread.start()
         masterTasks-=status.getTaskId.getValue
-        tasksToLaunch+=status.getTaskId.getValue
+
+
 
       case "TASK_ERROR" =>
 //        tasksToLaunch -= status.getTaskId.getValue
@@ -202,14 +214,14 @@ object TaskController {
     val report: collection.mutable.Map[String, Int] = collection.mutable.Map()
 //    val overCount = zkService.get[Int]("/"+keyspace+"/total").get
 
-    val paths = Services.zkService.getAllSubPath("/"+Config.benchmarkPath+Config.keyspace).get
+    val paths = Services.zkService.getAllSubPath("/"+Config.keyspace).get
     for (path <- paths) {
       if (path.split("_").last == "consumer") {
-        val pathData = Services.zkService.get[Int]("/"+Config.benchmarkPath+Config.keyspace+"/"+path).get
+        val pathData = Services.zkService.get[Int]("/"+Config.keyspace+"/"+path).get
         report += path -> pathData
       }
     }
-    Services.zkService.setData("/"+Config.benchmarkPath+Config.keyspace, report)
+    Services.zkService.setData("/"+Config.keyspace, report)
 
 //    val cluster = Cluster.builder().addContactPoint("192.168.1.225").build()
 //    val session = cluster.connect()
@@ -224,6 +236,14 @@ object TaskController {
     }
     logger.info("Benchmark finished")
     nextBenchmark()
+  }
+
+  def addLaunched(taskId:String) = {
+    taskId.split("_").last match {
+      case "producer" => producerTasks += taskId
+      case "consumer" => consumerTasks += taskId
+      case "master" => masterTasks += taskId
+    }
   }
 
 }

@@ -51,7 +51,6 @@ object Instance {
 
   def getProducer: BasicProducer[String, Array[Byte]] = {
     logger.info(s"Run Producer on ${Config.address}")
-//    logger.info(s"ZOOKEEPER::::   " + List(new InetSocketAddress(Config.zookeeperHost, Config.zookeeperPort)) + "PATH" +Config.rootPath)
     val agentSettings = new ProducerCoordinationOptions(
       agentAddress = Config.address,
       zkHosts = List(new java.net.InetSocketAddress(Config.zookeeperHost, Config.zookeeperPort)),
@@ -73,6 +72,7 @@ object Instance {
     logger.info("zk host: " + Config.zookeeperHost)
     logger.info("zk hosts: " +  List(new java.net.InetSocketAddress(Config.zookeeperHost, Config.zookeeperPort)))
     logger.info("zk root path: " + Config.rootPath)
+    logger.info(Config.taskId, streamForInstance, options)
     new BasicProducer(Config.taskId, streamForInstance, options)
   }
 

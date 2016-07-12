@@ -28,7 +28,7 @@ class Benchmark() {
   var rollback:Float = this.rollback
   var masterCrash:String = this.masterCrash
   var masterCompletion:String = this.masterCompletion
-  var masterRestart:List[Any] = this.masterRestart
+  var masterRestart:List[Int] = this.masterRestart
 
   var TTL:String = this.TTL
   var transactionTimeout:String = this.transactionTimeout
@@ -41,7 +41,7 @@ class Benchmark() {
   var consumerKeepAliveInterval:String = this.consumerKeepAliveInterval
   var useLastOffset:String = this.useLastOffset
   var consumerCheckInterval:String = this.consumerCheckInterval
-  var consumerCheckCount:String = this.consumerCheckCount
+  var consumerTimeout:String = this.consumerTimeout
   var consumerTransactionCount:String = this.consumerTransactionCount
 
 
@@ -55,9 +55,10 @@ class Benchmark() {
     transactionLength = (params\\"transactionLength").values.toString
     transactionCount = (params\\"transactionCount").values.toString
     rollback = (params\\"rollback").values.toString.toFloat
+
     masterCrash = (params\\"masterCrash").values.toString
     masterCompletion = (params\\"masterCompletion").values.toString
-    masterRestart = (params\\"masterRestart").productIterator.toList
+    masterRestart = List[Int]((params\\"masterRestart"\\"from").values.toString.toInt, (params\\"masterRestart"\\"to").values.toString.toInt)
 
     TTL = (params\\"transactionTTL").values.toString
     rootPath = (params\\"rootPath").values.toString
@@ -70,7 +71,8 @@ class Benchmark() {
     consumerKeepAliveInterval = (params\\"consumerKeepAliveInterval").values.toString
     useLastOffset = (params\\"useLastOffset").values.toString
     consumerCheckInterval = (params\\"consumerCheckInterval").values.toString
-    consumerCheckCount = (params\\"consumerCheckCount").values.toString
+    consumerTimeout = (params\\"consumerTimeout").values.toString
+//    consumerCheckCount = (params\\"consumerCheckCount").values.toString
     consumerTransactionCount = (params\\"consumerTransactionCount").values.toString
 
   }
@@ -84,7 +86,7 @@ class Benchmark() {
 //
 
     val commands: mutable.Map[String, CommandInfo.Builder] = mutable.Map()
-    val command = "java -jar t-streams-test.jar"
+//    val command = "java -jar t-streams-test.jar"
 
     val TaskId = Environment.Variable.newBuilder.setName("TASK_ID")
     val ttype = Environment.Variable.newBuilder.setName("TYPE")
@@ -148,8 +150,9 @@ class Benchmark() {
       val consumerKeepAliveInterval = Environment.Variable.newBuilder.setName("CONSUMER_KAI").setValue(this.consumerKeepAliveInterval).build
       val useLastOffset = Environment.Variable.newBuilder.setName("USE_LATS_OFFSET").setValue(this.useLastOffset).build
       val consumerCheckInterval = Environment.Variable.newBuilder.setName("CONSUMER_CHECK_INTERVAL").setValue(this.consumerCheckInterval).build
-      val consumerCheckCount = Environment.Variable.newBuilder.setName("CONSUMER_CHECK_COUNT").setValue(this.consumerCheckCount).build
+//      val consumerCheckCount = Environment.Variable.newBuilder.setName("CONSUMER_CHECK_COUNT").setValue(this.consumerCheckCount).build
       val consumerTransactionCount = Environment.Variable.newBuilder.setName("CONSUMER_TRANSACTION_COUNT").setValue(this.consumerTransactionCount).build
+      val consumerTimeout = Environment.Variable.newBuilder.setName("CONSUMER_TIMEOUT").setValue(this.consumerTimeout).build
 
       consumerParams = Iterable(
         transactionPreload,
@@ -157,12 +160,12 @@ class Benchmark() {
         consumerKeepAliveInterval,
         useLastOffset,
         consumerCheckInterval,
-        consumerCheckCount,
-        consumerTransactionCount)
+//        consumerCheckCount,
+        consumerTransactionCount,
+        consumerTimeout)
     }
     val ports = collection.mutable.Queue[Int]()
     (31000 to 32000).foreach(ports+=_)
-
 
 
     for (i <- 1 to producer) {
@@ -174,10 +177,11 @@ class Benchmark() {
         .addVariables(TaskId.setValue(taskId))
         .addVariables(ttype.setValue("0"))
         .addVariables(Environment.Variable.newBuilder.setName("AGENT_ADDRESS").setValue(Config.agent_address+":"+port))
+        .build
       val cmd = CommandInfo.newBuilder
         .addUris(CommandInfo.URI.newBuilder.setValue(urlJar))
-          .setValue(command)
-        .setEnvironment(env.build)
+          .setValue(Config.command)
+        .setEnvironment(env)
       commands += taskId -> cmd
     }
 
@@ -190,10 +194,11 @@ class Benchmark() {
         .addVariables(ttype.setValue("2"))
         .addVariables(TaskId.setValue(taskId))
         .addVariables(Environment.Variable.newBuilder.setName("AGENT_ADDRESS").setValue(Config.agent_address+":"+port))
+        .build
       val cmd = CommandInfo.newBuilder
         .addUris(CommandInfo.URI.newBuilder.setValue(urlJar))
-        .setValue(command)
-        .setEnvironment(env.build)
+        .setValue(Config.command)
+        .setEnvironment(env)
       commands += taskId -> cmd
     }
 
@@ -206,10 +211,11 @@ class Benchmark() {
         .addVariables(ttype.setValue("1"))
         .addVariables(TaskId.setValue(taskId))
         .addVariables(Environment.Variable.newBuilder.setName("AGENT_ADDRESS").setValue(Config.agent_address+":"+port))
+        .build
       val cmd = CommandInfo.newBuilder
         .addUris(CommandInfo.URI.newBuilder.setValue(urlJar))
-        .setValue(command)
-        .setEnvironment(env.build)
+        .setValue(Config.command)
+        .setEnvironment(env)
       commands += taskId -> cmd
     }
       commands

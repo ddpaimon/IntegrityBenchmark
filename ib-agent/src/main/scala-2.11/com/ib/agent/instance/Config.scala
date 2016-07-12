@@ -30,6 +30,7 @@ object Config {
   val dataPreload = envOrElse("DATA_PRELOAD", "7").toInt
   val consumerKeepAliveInterval = envOrElse("CONSUMER_KAI", "5").toInt
   val useLastOffset = envOrElse("USE_LATS_OFFSET", "false").toBoolean
+  val consumerTimeout = envOrElse("CONSUMER_TIMEOUT", "10").toInt
 
   val keyspace = envOrElse("CASSANDRA_KEYSPACE", randomString)
   val agentType = envOrElse("TYPE", "0").toInt

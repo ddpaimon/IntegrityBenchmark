@@ -40,7 +40,7 @@ class TstreamsScheduler extends Scheduler {
   override def resourceOffers(driver: SchedulerDriver, offers: util.List[Offer]) {
     logger.info(s"RESOURCE OFFERS ")
     logger.info(s"${TaskController.getCommandsToLaunch}")
-    logger.debug("OFFERS: "+offers)
+//    logger.debug("OFFERS: "+offers)
 
     // TODO: REMOVE THIS CODE
     var currentOffer: Offer = null
@@ -64,6 +64,8 @@ class TstreamsScheduler extends Scheduler {
     for (command <- TaskController.getCommandsToLaunch) {
       logger.debug(s"Create task $command")
 
+//      val currentOffer = getNextOffer(offers.asScala, offerNumber)
+
 //      val currentOffer = offers.asScala(offerNumber)
 //      if (offerNumber >= offers.asScala.size - 1) {
 //        offerNumber = 0
@@ -72,21 +74,22 @@ class TstreamsScheduler extends Scheduler {
 //      }
 
       // Create new task to launch
-      val cur_command = TaskController.commands(command)
       val task = TaskInfo.newBuilder.setName(command).setTaskId(TaskID.newBuilder.setValue(command)).
         addResources(cpus).addResources(mem).addResources(disk).
-        setCommand(cur_command).setSlaveId(currentOffer.getSlaveId).build
+        setCommand(TaskController.commands(command)).setSlaveId(currentOffer.getSlaveId).build
 
-      var listTasks: mutable.ListBuffer[TaskInfo] = mutable.ListBuffer()
-      listTasks += task
+      val listTask = mutable.ListBuffer(task)
       if (launchedTasks.contains(currentOffer.getId)) {
-        launchedTasks += (currentOffer.getId -> (launchedTasks(currentOffer.getId) ++ listTasks))
-      } else {launchedTasks += (currentOffer.getId -> listTasks)}
+        launchedTasks += (currentOffer.getId -> (launchedTasks(currentOffer.getId) ++ listTask))
+      } else {launchedTasks += (currentOffer.getId -> listTask)}
+//      TaskController.addLaunched(task.getTaskId.getValue)
+//      TaskController.tasksToLaunch -= task.getTaskId.getValue
 
     }
 
     for (task <- launchedTasks) {
       driver.launchTasks(List(task._1).asJava, task._2.asJava)
+
     }
 
     for (offer <- offers.asScala) {
@@ -112,6 +115,14 @@ class TstreamsScheduler extends Scheduler {
   }
 
   def getJar:String = {
-    scala.util.Properties.envOrElse("JAR", "http://192.168.1.225:8000/file.tar.gz")
+    scala.util.Properties.envOrElse("JAR", "http://192.168.1.225:8000/ib-agent.jar")
   }
+
+//  def addLaunchedTask(taskId:String) = {
+//    taskId.split("_").last match {
+//      case "producer" => TaskController
+//      case "consumer" => consumerHandler(status)
+//      case "master" => masterHandler(status)
+//    }
+//  }
 }
