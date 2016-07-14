@@ -71,6 +71,9 @@ object Runner {
         val instancePath = "/"+Config.Keyspace+"/"+instance.name.toString
         if (zkService.exist(instancePath)) zkService.setData(instancePath,transactionsCount)
         else zkService.create(instancePath, transactionsCount, org.apache.zookeeper.CreateMode.PERSISTENT)
+        for (transaction <- receivedTransactions) {
+          zkService.create(instancePath+"/"+transaction.getTxnUUID, "",org.apache.zookeeper.CreateMode.PERSISTENT)
+        }
         logger.info("Waiting for stop consumer.")
         System.exit(0)
       }
