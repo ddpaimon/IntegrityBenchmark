@@ -15,7 +15,7 @@ import collection.mutable
 object TaskController {
   private val logger = Logger.getLogger(getClass)
 
-  var jar: String = null
+//  var jar: String = null
   var driver: SchedulerDriver = null
   val tasksToLaunch: mutable.ListBuffer[String] = mutable.ListBuffer()
   val producerTasks: mutable.ListBuffer[String] = mutable.ListBuffer()
@@ -25,6 +25,7 @@ object TaskController {
   var currentBenchmark: Benchmark = null
   val benchmarksQueue: mutable.Queue[String] = mutable.Queue()
   val commands: mutable.Map[String, CommandInfo.Builder] = mutable.Map()
+  var reportBuilder: ReportBuilder = null
 
 
 
@@ -35,11 +36,11 @@ object TaskController {
     this.driver = driver
   }
 
-  def initialize(params:JValue, urlJar:String): Unit = {
+  def initialize(param:JValue): Unit = {
     /**
       *
       */
-    jar = urlJar
+    val params = (param\"benchmarks")
     for (bench <- params.children){
       if (BenchmarkList.newBenchmark(bench)) {
         val benchmark = BenchmarkList.getByName((bench\"name").values.toString)
@@ -55,16 +56,19 @@ object TaskController {
 
   var cnt = 0
   def nextBenchmark() = {
+    reportBuilder = Report.newBuilder
     Config.newKeyspace(cnt)
+    reportBuilder.setKeyspace(Config.keyspace)
     cnt += 1
-    val cluster = Cluster.builder().addContactPoint("192.168.1.225").build()
+    val cluster = Cluster.builder().addContactPoint(Config.cassandraHost).build()
     val session = cluster.connect()
     CassandraHelper.createKeyspace(session, Config.keyspace)
     CassandraHelper.createMetadataTables(session, Config.keyspace)
     CassandraHelper.createDataTable(session, Config.keyspace)
     session.close()
     currentBenchmark = BenchmarkList.getByName(this.getBenchmark)
-    val commands = currentBenchmark.prepareCommands(jar)
+    reportBuilder.setBenchmarkName(currentBenchmark.name)
+    val commands = currentBenchmark.prepareCommands(Config.jarUri)
     for (command <- commands) {
       tasksToLaunch+=command._1
       this.commands += command
@@ -187,18 +191,23 @@ object TaskController {
 
   def afterProducersFinished() = {
     var overCount = 0
-    val paths = Services.zkService.getAllSubPath("/"+Config.keyspace).get
+    val paths = Services.zkService.getAllSubPath("/"+Config.keyspace+"/producers").get
     for (path <- paths) {
-      val count = Services.zkService.get[Int]("/"+Config.keyspace+"/"+path)
+      val count = Services.zkService.get[Int]("/"+Config.keyspace+"/producers/"+path)
       overCount+=count.get
     }
     logger.debug("NOTIFY PATH: " + "/"+Config.keyspace)
-    Services.zkSetData("/"+Config.keyspace+"/total", overCount)
+    Services.zkSetData("/"+Config.keyspace+"/producers", overCount)
     Services.zkSetData("/"+Config.keyspace, overCount)
+    reportBuilder.setTotalTransactionsCount(overCount)
   }
 
   def exceptionalFinish(message:String) = {
-    Services.zkSetData("/"+Config.keyspace+"/total", -1)
+    reportBuilder.
+      setResult(false).
+      setMessage("Benchmark finished with exception").
+      build.save
+    Services.zkSetData("/"+Config.keyspace+"/producers", -1)
     for (task <- masterTasks){
       driver.killTask(TaskID.newBuilder.setValue(task).build)
       masterTasks -= task
@@ -216,17 +225,19 @@ object TaskController {
 
     val paths = Services.zkService.getAllSubPath("/"+Config.keyspace).get
     for (path <- paths) {
-      if (path.split("_").last == "consumer") {
+      if (path.split("_").last == "consumer"){
         val pathData = Services.zkService.get[Int]("/"+Config.keyspace+"/"+path).get
         report += path -> pathData
+        reportBuilder.setConsumersTransactions(path, pathData)
       }
     }
+
     Services.zkService.setData("/"+Config.keyspace, report)
 
 //    val cluster = Cluster.builder().addContactPoint("192.168.1.225").build()
 //    val session = cluster.connect()
 //    session.close()
-
+    reportBuilder.setMessage("Benchmark finished").setResult(true).build.save
     for (task <- masterTasks){
       driver.killTask(TaskID.newBuilder.setValue(task).build)
       masterTasks -= task

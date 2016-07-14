@@ -6,7 +6,6 @@ import com.bwsw.tstreams.common.zkservice.ZkService
 //import com.bwsw.tstreamstest.Main._
 import org.apache.log4j.Logger
 import org.apache.zookeeper.{WatchedEvent, Watcher}
-
 import scala.collection.mutable
 import scala.util.Properties._
 
@@ -40,8 +39,8 @@ object Runner {
         logger.info(s"Canceled: ${txn.getTxnUUID}")
       }
     }
-    val instancePath = "/"+Config.Keyspace+"/"+instance.name.toString
-    if (zkService.exist(instancePath)) zkService.setData(instancePath, "{\"T-count\":" + "\""+transactionsCount+"\"}")
+    val instancePath = "/"+Config.Keyspace+"/producers/"+instance.name.toString
+    if (zkService.exist(instancePath)) zkService.setData(instancePath, transactionsCount)
     else zkService.create(instancePath, transactionsCount, org.apache.zookeeper.CreateMode.PERSISTENT)
     System.exit(0)
   }
@@ -51,10 +50,13 @@ object Runner {
   def runConsumer():Unit = {
     val receivedTransactions:mutable.ListBuffer[com.bwsw.tstreams.agents.consumer.BasicConsumerTransaction[_,_]] = mutable.ListBuffer()
     val instance = Instance.getConsumer
+
     val watcher = new Watcher {
       override def process(event: WatchedEvent): Unit = {
-        logger.info("Run consumer watcher process" + "PATH: " + "/"+Config.Keyspace)
+        logger.info("Run consumer watcher process\nPATH: " + "/"+Config.Keyspace)
+        logger.info("Sleep" + Config.consumerTimeout + "secs")
         Thread.sleep(Config.consumerTimeout*1000)
+        logger.info("Check transaction")
         var transactionsCount = receivedTransactions.length
         var checkTimestamp:Long = 0
         for (transaction <- receivedTransactions) {
@@ -62,25 +64,28 @@ object Runner {
             transactionsCount = -1
           }
           checkTimestamp = transaction.getTxnUUID.timestamp
+          logger.info("Received: " + transaction.getTxnUUID)
         }
-        val data = zkService.get[Int]("/"+Config.Keyspace)
+        logger.info("Write consumer report")
+//        val data = zkService.get[Int]("/"+Config.Keyspace)
         val instancePath = "/"+Config.Keyspace+"/"+instance.name.toString
         if (zkService.exist(instancePath)) zkService.setData(instancePath,transactionsCount)
         else zkService.create(instancePath, transactionsCount, org.apache.zookeeper.CreateMode.PERSISTENT)
-
+        logger.info("Waiting for stop consumer.")
         System.exit(0)
       }
     }
+
     zkService.setWatcher("/"+Config.Keyspace, watcher)
     while (true) {
       val consumedTxn: Option[BasicConsumerTransaction[Array[Byte], String]] = instance.getTransaction
       if (consumedTxn.isDefined) {
           receivedTransactions += consumedTxn.get
-        logger.info(s"TRANSACTION: $consumedTxn")
+        logger.info(s"TRANSACTION: ${consumedTxn.get.getTxnUUID}")
       } else {
         logger.info("No transaction")
       }
-      Thread.sleep((Config.consumerCheckInterval * 1000).toInt)
+      Thread.sleep((Config.consumerCheckInterval*1000).toInt)
     }
   }
 

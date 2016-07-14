@@ -42,7 +42,7 @@ class Benchmark() {
   var useLastOffset:String = this.useLastOffset
   var consumerCheckInterval:String = this.consumerCheckInterval
   var consumerTimeout:String = this.consumerTimeout
-  var consumerTransactionCount:String = this.consumerTransactionCount
+//  var consumerTransactionCount:String = this.consumerTransactionCount
 
 
   def this(params:JValue) {
@@ -73,7 +73,7 @@ class Benchmark() {
     consumerCheckInterval = (params\\"consumerCheckInterval").values.toString
     consumerTimeout = (params\\"consumerTimeout").values.toString
 //    consumerCheckCount = (params\\"consumerCheckCount").values.toString
-    consumerTransactionCount = (params\\"consumerTransactionCount").values.toString
+//    consumerTransactionCount = (params\\"consumerTransactionCount").values.toString
 
   }
 
@@ -151,7 +151,7 @@ class Benchmark() {
       val useLastOffset = Environment.Variable.newBuilder.setName("USE_LATS_OFFSET").setValue(this.useLastOffset).build
       val consumerCheckInterval = Environment.Variable.newBuilder.setName("CONSUMER_CHECK_INTERVAL").setValue(this.consumerCheckInterval).build
 //      val consumerCheckCount = Environment.Variable.newBuilder.setName("CONSUMER_CHECK_COUNT").setValue(this.consumerCheckCount).build
-      val consumerTransactionCount = Environment.Variable.newBuilder.setName("CONSUMER_TRANSACTION_COUNT").setValue(this.consumerTransactionCount).build
+//      val consumerTransactionCount = Environment.Variable.newBuilder.setName("CONSUMER_TRANSACTION_COUNT").setValue(this.consumerTransactionCount).build
       val consumerTimeout = Environment.Variable.newBuilder.setName("CONSUMER_TIMEOUT").setValue(this.consumerTimeout).build
 
       consumerParams = Iterable(
@@ -161,7 +161,7 @@ class Benchmark() {
         useLastOffset,
         consumerCheckInterval,
 //        consumerCheckCount,
-        consumerTransactionCount,
+//        consumerTransactionCount,
         consumerTimeout)
     }
     val ports = collection.mutable.Queue[Int]()

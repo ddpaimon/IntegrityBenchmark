@@ -82,8 +82,6 @@ class TstreamsScheduler extends Scheduler {
       if (launchedTasks.contains(currentOffer.getId)) {
         launchedTasks += (currentOffer.getId -> (launchedTasks(currentOffer.getId) ++ listTask))
       } else {launchedTasks += (currentOffer.getId -> listTask)}
-//      TaskController.addLaunched(task.getTaskId.getValue)
-//      TaskController.tasksToLaunch -= task.getTaskId.getValue
 
     }
 
@@ -109,20 +107,8 @@ class TstreamsScheduler extends Scheduler {
     if (zkService.exist(Config.benchmarkPath)) zkService.deleteRecursive(Config.benchmarkPath)
     logger.info(s"Registered framework as: ${frameworkId.getValue}")
     TaskController.setDriver(driver)
-    val urlParams = scala.util.Properties.envOrElse("PARAMS_URL", "http://192.168.1.225:8000/params.json")
-    val benchmarksParams = parse(scala.io.Source.fromURL(urlParams).mkString)
-    TaskController.initialize(benchmarksParams\"benchmarks", getJar)
-  }
 
-  def getJar:String = {
-    scala.util.Properties.envOrElse("JAR", "http://192.168.1.225:8000/ib-agent.jar")
+    val benchmarksParams = parse(scala.io.Source.fromURL(Config.urlParams).mkString)
+    TaskController.initialize(benchmarksParams)
   }
-
-//  def addLaunchedTask(taskId:String) = {
-//    taskId.split("_").last match {
-//      case "producer" => TaskController
-//      case "consumer" => consumerHandler(status)
-//      case "master" => masterHandler(status)
-//    }
-//  }
 }

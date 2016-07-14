@@ -7,24 +7,24 @@ package com.ib.framework
 import com.mongodb.casbah.Imports._
 
 object MongoFactory {
-  private val SERVER = "192.168.1.225"
-  private val PORT   = 27017
-  private val DATABASE = "testdb"
-  private val COLLECTION = "stocks"
-  val connection = MongoConnection(SERVER)
-  val collection = connection(DATABASE)(COLLECTION)
+//  private val SERVER = "192.168.1.225"
+//  private val PORT   = 27017
+//  private val DATABASE = "testdb"
+//  private val COLLECTION = "stocks"
+  val connection = getConnection
+  val collection = connection(Config.mongoDB)(Config.mongoCollection)
 
 
   def getConnection: MongoConnection = {
-    MongoConnection(SERVER)
+    MongoConnection(Config.mongoHost)
   }
 
   def getDatabase(conn: MongoConnection): MongoDB = {
-    conn(DATABASE)
+    conn(Config.mongoDB)
   }
 
   def getCollection(conn: MongoConnection): MongoCollection = {
-    conn(DATABASE)(COLLECTION)
+    conn(Config.mongoDB)(Config.mongoCollection)
   }
 
   def closeConnection(conn: MongoConnection) {
